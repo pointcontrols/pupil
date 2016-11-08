@@ -282,7 +282,7 @@ class Vector_Gaze_Mapper(Monocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
 
 class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugin):
     """docstring for Vector_Gaze_Mapper"""
-    def __init__(self, g_pool, eye_camera_to_world_matrix0, eye_camera_to_world_matrix1 , camera_intrinsics , cal_points_3d = [],cal_ref_points_3d = [], cal_gaze_points0_3d = [], cal_gaze_points1_3d = [] ):
+    def __init__(self, g_pool, eye_camera_to_world_matrix0, eye_camera_to_world_matrix1 , camera_intrinsics , cal_points_3d = [],cal_ref_points_3d = [], cal_gaze_points0_3d = [], cal_gaze_points1_3d = [],z_scale=1.0 ):
         super(Binocular_Vector_Gaze_Mapper, self).__init__(g_pool)
 
         self.eye_camera_to_world_matricies  =  eye_camera_to_world_matrix0 , eye_camera_to_world_matrix1
@@ -317,6 +317,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
         self.sphere0 = {}
         self.sphere1 = {}
         self.last_gaze_distance = 500.
+        self.z_scale = z_scale
 
 
     def eye0_to_World(self, p):
@@ -349,6 +350,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
 
         p_id = p['id']
         gaze_point =  np.array(p['circle_3d']['normal'] ) * self.last_gaze_distance  + np.array( p['sphere']['center'] )
+        gaze_point *= 1,1,self.z_scale
         image_point, _  =  cv2.projectPoints( np.array([gaze_point]) , self.rotation_vectors[p_id], self.translation_vectors[p_id] , self.camera_matrix , self.dist_coefs )
         image_point = image_point.reshape(-1,2)
         image_point = normalize( image_point[0], self.world_frame_size , flip_y = True)
@@ -420,6 +422,7 @@ class Binocular_Vector_Gaze_Mapper(Binocular_Gaze_Mapper_Base,Gaze_Mapping_Plugi
         #find the intersection of left and right line of sight.
         nearest_intersection_point , intersection_distance = math_helper.nearest_intersection( gaze_line0, gaze_line1 )
         if nearest_intersection_point is not None :
+            nearest_intersection_point *= 1,1,self.z_scale
             cyclop_gaze =  nearest_intersection_point-cyclop_center
             self.last_gaze_distance = np.sqrt( cyclop_gaze.dot( cyclop_gaze ) )
             image_point, _  =  cv2.projectPoints( np.array([nearest_intersection_point]) ,  np.array([0.0,0.0,0.0]) ,  np.array([0.0,0.0,0.0]) , self.camera_matrix , self.dist_coefs )

@@ -16,7 +16,7 @@ from natural_features_calibration import Natural_Features_Calibration
 from camera_intrinsics_estimation import Camera_Intrinsics_Estimation
 from adjust_calibration import Adjust_Calibration
 from accuracy_test import Accuracy_Test
-from hmd_calibration import HMD_Calibration
+from hmd_calibration import HMD_Calibration,HMD_Calibration_3D
 from gaze_mappers import Dummy_Gaze_Mapper, Monocular_Gaze_Mapper, Binocular_Gaze_Mapper,Vector_Gaze_Mapper,Binocular_Vector_Gaze_Mapper,Dual_Monocular_Gaze_Mapper
 
 calibration_plugins =  [Screen_Marker_Calibration,
@@ -25,11 +25,14 @@ calibration_plugins =  [Screen_Marker_Calibration,
                         Camera_Intrinsics_Estimation,
                         Accuracy_Test,
                         Adjust_Calibration,
-                        HMD_Calibration ]
+                        HMD_Calibration,
+                        HMD_Calibration_3D
+                        ]
 
 gaze_mapping_plugins = [Dummy_Gaze_Mapper,
                         Monocular_Gaze_Mapper,
                         Vector_Gaze_Mapper,
                         Binocular_Gaze_Mapper,
                         Binocular_Vector_Gaze_Mapper,
-                        Dual_Monocular_Gaze_Mapper]
+                        Dual_Monocular_Gaze_Mapper
+                        ]

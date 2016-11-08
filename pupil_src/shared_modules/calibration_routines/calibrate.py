@@ -229,6 +229,7 @@ def closest_matches_binocular(ref_pts, pupil_pts,max_dispersion=1/15.):
     '''
     get pupil positions closest in time to ref points.
     return list of dict with matching ref, pupil0 and pupil1 data triplets.
+    {'ref':r,'pupil':closest_p0, 'pupil1':closest_p1}
     '''
     ref = ref_pts
 
