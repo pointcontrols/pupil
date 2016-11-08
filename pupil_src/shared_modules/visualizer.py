@@ -104,7 +104,7 @@ class Visualizer(object):
         glVertex3f( 0, 0, l )
         glEnd( )
 
-    def draw_sphere(self,sphere_position, sphere_radius,contours = 45, color =RGBA(.2,.5,0.5,.5) ):
+    def draw_sphere(self,sphere_position, sphere_radius,contours = 45, color =RGBA(.2,.2,0.5,.5) ):
 
         glPushMatrix()
         glTranslatef(sphere_position[0],sphere_position[1],sphere_position[2])

@@ -68,7 +68,7 @@ class Calibration_Visualizer(Visualizer):
 		glLoadIdentity()
 
 		calibration_points_line_color = RGBA(0.5,0.5,0.5,0.1);
-		error_line_color = RGBA(1.0,0.0,0.0,0.5)
+		error_line_color = RGBA(1.0,0.0,0.0,0.1)
 
 		self.draw_coordinate_system(200)
 		if self.world_camera_width != 0:
@@ -107,10 +107,10 @@ class Calibration_Visualizer(Visualizer):
 				glutils.draw_polyline( [ sphere_center0, p]  , 1 , calibration_points_line_color, line_type = GL_LINES)
 
 			#calibration points
-			# glutils.draw_points( self.cal_gaze_points0_3d , 4 , RGBA( 1, 0, 1, 1 ) )
+			glutils.draw_points( self.cal_gaze_points0_3d , 4 , RGBA( 1, 0, 0, 0.2 ) )
 
 			#current gaze points
-			glutils.draw_points( gaze_points0 , 2 , RGBA( 1, 0, 0, 1 ) )
+			glutils.draw_points( gaze_points0 , 2 , RGBA( 1, 0, 0, 0.2 ) )
 			for p in gaze_points0:
 				glutils.draw_polyline( [sphere_center0, p]  , 1 , RGBA(0,0,0,1), line_type = GL_LINES)
 
@@ -140,7 +140,7 @@ class Calibration_Visualizer(Visualizer):
 				glutils.draw_polyline( [ sphere_center1, p]  , 4 , calibration_points_line_color, line_type = GL_LINES)
 
 			#calibration points
-			glutils.draw_points( self.cal_gaze_points1_3d , 4 , RGBA( 1, 0, 1, 1 ) )
+			glutils.draw_points( self.cal_gaze_points1_3d , 4 , RGBA( 0, 0, 1, 0.2 ) )
 
 			#current gaze points
 			glutils.draw_points( gaze_points1 , 2 , RGBA( 1, 0, 0, 1 ) )
