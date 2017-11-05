@@ -492,10 +492,13 @@ def glfwInit():
     del os
     if res < 0:
         raise Exception("GLFW could not be initialized")
+    __c_callbacks__[1000] = {}
+    __py_callbacks__[1000] = { 'errorfun'           : None}
 
 
 def glfwCreateWindow(width=640, height=480, title="GLFW Window", monitor=None, share=None):
     _glfw.glfwCreateWindow.restype = POINTER(GLFWwindow)
+    print("glfwCreateWindow called with args: ", width, height, title, monitor, share)
     window = _glfw.glfwCreateWindow(width,height,title.encode('utf-8'),monitor,share)
     if window:
         __windows__.append(window)
@@ -630,6 +633,22 @@ def glfwGetJoystickButtons(joy):
 
 # --- Callbacks ---------------------------------------------------------------
 
+
+def __errcallback__(name):
+     callback = 'glfwSet{}Callback'.format(name)
+     fun      = '{}fun'.format(name.lower())
+     code = """
+def {callback}(callback = None):
+     index = 1000
+     old_callback = __py_callbacks__[index]['{fun}']
+     __py_callbacks__[index]['{fun}'] = callback
+     if callback: callback = {fun}(callback)
+     __c_callbacks__[index]['{fun}'] = callback
+     _glfw.{callback}(callback)
+     return old_callback""".format(callback=callback, fun=fun)
+     return code
+
+
 def __callback__(name):
     callback = 'glfwSet{}Callback'.format(name)
     fun      = '{}fun'.format(name.lower())
@@ -644,7 +663,7 @@ def {callback}(window, callback = None):
     return old_callback""".format(callback=callback, fun=fun)
     return code
 
-exec(__callback__('Error'))
+exec(__errcallback__('Error'))
 exec(__callback__('Monitor'))
 exec(__callback__('WindowPos'))
 exec(__callback__('WindowSize'))

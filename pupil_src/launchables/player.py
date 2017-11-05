@@ -195,6 +195,10 @@ def player(rec_dir, ipc_pub_url, ipc_sub_url,
     width, height = session_settings.get('window_size', cap.frame_size)
     window_pos = session_settings.get('window_position', window_position_default)
     glfw.glfwInit()
+    def glfw_error_callback(code, error):
+        print("GLFW Error code {} msg: {}".format(code,error))
+    glfw.glfwSetErrorCallback(glfw_error_callback)
+
     main_window = glfw.glfwCreateWindow(width, height, "Pupil Player: "+meta_info["Recording Name"]+" - "
                                    + rec_dir.split(os.path.sep)[-1], None, None)
     glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
@@ -597,6 +601,10 @@ def player_drop(rec_dir, ipc_pub_url, ipc_sub_url,
     window_pos = session_settings.get('window_position', window_position_default)
 
     glfw.glfwInit()
+    def glfw_error_callback(code, error):
+        print("GLFW Error code {} msg: {}".format(code,error))
+    glfw.glfwSetErrorCallback(glfw_error_callback)
+
     glfw.glfwWindowHint(glfw.GLFW_RESIZABLE, 0)
     window = glfw.glfwCreateWindow(w, h, 'Pupil Player')
     glfw.glfwWindowHint(glfw.GLFW_RESIZABLE, 1)
