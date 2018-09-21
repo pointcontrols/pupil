@@ -271,6 +271,8 @@ class File_Source(Playback_Source, Base_Source):
 
     @ensure_initialisation(fallback_func=lambda evt: sleep(0.05))
     def recent_events_external_timing(self, events):
+        from time import monotonic
+        seek_beg = 0.
         try:
             last_index = self._recent_frame.index
         except AttributeError:
@@ -289,11 +291,16 @@ class File_Source(Playback_Source, Base_Source):
         elif ts_idx < last_index or ts_idx > last_index + 1:
             # time to seek
             self.seek_to_frame(ts_idx)
+            seek_beg = monotonic()
+
 
         # Only call get_frame() if the next frame is actually needed
         from time import  monotonic
         try:
             frame = frame or self.get_frame()
+            if seek_beg is not 0.:
+                pass
+                #print("Seek time {} s".format(monotonic()-seek_beg))
         except EndofVideoError:
             logger.info('Video has ended.')
             self.g_pool.seek_control.play = False
@@ -331,8 +338,6 @@ class File_Source(Playback_Source, Base_Source):
         else:
             if not self.buffering:
                 self.next_frame = self._next_frame()
-            else:
-                self.next_frame = self.buffered_decoder.get_frame()
             self.finished_sleep = 0
             self.target_frame_idx = seek_pos
 
