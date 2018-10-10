@@ -200,7 +200,8 @@ def world(timebase, eyes_are_alive, ipc_pub_url, ipc_sub_url,
             'preferred_names': ["Pupil Cam1 ID2", "Logitech Camera", "(046d:081d)",
                                 "C510", "B525", "C525", "C615", "C920", "C930e"],
             'frame_size': (1280, 720),
-            'frame_rate': 30
+            'frame_rate': 30,
+            'frame_format' : "MJPEG"
         }
 
         default_plugins = [("UVC_Source", default_capture_settings),

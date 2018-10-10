@@ -15,6 +15,7 @@ from plugin import Plugin
 import gl_utils
 from pyglui import cygl
 import numpy as np
+import uvc
 
 
 import logging
@@ -31,6 +32,46 @@ class StreamError(Exception):
 
 class EndofVideoError(Exception):
     pass
+
+class Frame:
+    def __init__(self):
+        pass
+
+    @property
+    def subsampling(self):
+        pass
+
+    @property
+    def color_format(self):
+        pass
+
+    @property
+    def encoding(self):
+        pass
+
+    @property
+    def width(self):
+        pass
+
+    @property
+    def height(self):
+        pass
+
+    @property
+    def index(self):
+        pass
+
+    @property
+    def raw_buffer(self):
+        pass
+
+    @property
+    def yuv_buffer(self):
+        pass
+
+    @property
+    def timestamp(self):
+        pass
 
 
 class Base_Source(Plugin):
@@ -82,7 +123,12 @@ class Base_Source(Plugin):
         if self._recent_frame is not None:
             frame = self._recent_frame
             if frame.yuv_buffer is not None:
-                self.g_pool.image_tex.update_from_yuv_buffer(frame.yuv_buffer,frame.width,frame.height)
+                subsamp = cygl.utils.yuv_subsamp.yuv_422
+                #if frame.yuv_subsampling == uvc.uvc_subsampling.YUV_420:
+                if frame.subsampling == (4,2,0):
+                    subsamp = cygl.utils.yuv_subsamp.yuv_420
+                self.g_pool.image_tex.update_from_yuv_buffer(frame.yuv_buffer,frame.width,frame.height, subsamp)
+
             else:
                 self.g_pool.image_tex.update_from_ndarray(frame.bgr)
             gl_utils.glFlush()

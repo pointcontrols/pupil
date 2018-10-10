@@ -13,7 +13,7 @@ import time
 import logging
 import uvc
 from version_utils import VersionFormat
-from .base_backend import InitialisationError, Base_Source, Base_Manager
+from .base_backend import InitialisationError, Base_Source, Base_Manager, Frame
 from camera_models import load_intrinsics
 from .utils import Check_Frame_Stripes, Exposure_Time
 
@@ -24,12 +24,52 @@ assert VersionFormat(uvc.__version__) >= VersionFormat('0.13')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+class UVC_Frame(Frame):
+    def __init__(self, uvc_frame):
+        self._uvc_frame = uvc_frame
+
+    @property
+    def subsampling(self):
+        return self._uvc_frame.subsampling
+
+    @property
+    def color_format(self):
+        return self._uvc_frame.col_fmt
+
+    @property
+    def encoding(self):
+        return self._uvc_frame.encoding
+
+    @property
+    def width(self):
+        return self._uvc_frame.width
+
+    @property
+    def height(self):
+        return self._uvc_frame.height
+
+    @property
+    def index(self):
+        return self._uvc_frame.index
+
+    @property
+    def raw_buffer(self):
+        return self._uvc_frame.raw_buffer
+
+    @property
+    def yuv_buffer(self):
+        return self._uvc_frame.yuv_buffer
+
+    @property
+    def timestamp(self):
+        return self._uvc_frame.timestamp
+
 
 class UVC_Source(Base_Source):
     """
     Camera Capture is a class that encapsualtes uvc.Capture:
     """
-    def __init__(self, g_pool, frame_size, frame_rate, name=None, preferred_names=(), uid=None, uvc_controls={}, check_stripes=True, exposure_mode="manual"):
+    def __init__(self, g_pool, frame_size, frame_rate, frame_format, name=None, preferred_names=(), uid=None, uvc_controls={}, check_stripes=True, exposure_mode="manual"):
         import platform
 
         super().__init__(g_pool)
@@ -89,13 +129,15 @@ class UVC_Source(Base_Source):
             self.name_backup = preferred_names
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
+            self.frame_format_backup = frame_format
             self.exposure_time_backup = None
             self._intrinsics = load_intrinsics(self.g_pool.user_dir, self.name, self.frame_size)
         else:
-            self.configure_capture(frame_size, frame_rate, uvc_controls)
+            self.configure_capture(frame_size, frame_rate, frame_format, uvc_controls)
             self.name_backup = (self.name,)
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
+            self.frame_format_backup = frame_format
             controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
             try:
                 self.exposure_time_backup = controls_dict['Absolute Exposure Time'].value
@@ -103,6 +145,8 @@ class UVC_Source(Base_Source):
                 self.exposure_time_backup = None
 
         self.backup_uvc_controls = {}
+        self.num_frames = 0
+        #temp
 
     def verify_drivers(self):
         import os
@@ -138,9 +182,9 @@ class UVC_Source(Base_Source):
             proc.wait()
             logger.warning('Done updating drivers!')
 
-    def configure_capture(self, frame_size, frame_rate, uvc_controls):
+    def configure_capture(self, frame_size, frame_rate, frame_format, uvc_controls):
         # Set camera defaults. Override with previous settings afterwards
-        if 'Pupil Cam' in self.uvc_capture.name:
+        if 'Pupil Cam' or 'USB 2.0 Webcam' in self.uvc_capture.name:
             self.ts_offset = 0.0
         else:
             logger.info('Hardware timestamps not supported for {}. Using software timestamps.'.format(self.uvc_capture.name))
@@ -154,6 +198,7 @@ class UVC_Source(Base_Source):
 
         self.frame_size = frame_size
         self.frame_rate = frame_rate
+        self.frame_format = frame_format
 
         try:
             controls_dict['Auto Focus'].value = 0
@@ -225,15 +270,16 @@ class UVC_Source(Base_Source):
     def _re_init_capture(self, uid):
         current_size = self.uvc_capture.frame_size
         current_fps = self.uvc_capture.frame_rate
+        current_frame_format = self.uvc_capture.frame_format
         current_uvc_controls = self._get_uvc_controls()
         self.uvc_capture.close()
         self.uvc_capture = uvc.Capture(uid)
-        self.configure_capture(current_size, current_fps, current_uvc_controls)
+        self.configure_capture(current_size, current_fps, current_frame_format, current_uvc_controls)
         self.update_menu()
 
     def _init_capture(self, uid, backup_uvc_controls={}):
         self.uvc_capture = uvc.Capture(uid)
-        self.configure_capture(self.frame_size_backup, self.frame_rate_backup, backup_uvc_controls)
+        self.configure_capture(self.frame_size_backup, self.frame_rate_backup, self.frame_format_backup, backup_uvc_controls)
         self.update_menu()
 
     def _re_init_capture_by_names(self, names, backup_uvc_controls={}):
@@ -270,6 +316,13 @@ class UVC_Source(Base_Source):
         try:
             frame = self.uvc_capture.get_frame(0.05)
 
+            if self.num_frames % 60 == 0:
+                print("Frame is {}".format(frame))
+                #print("Frame subs is {}".format(frame.subsampling))
+                print("Ts diff = {}".format(uvc.get_time_monotonic() - frame.timestamp))
+            self.num_frames += 1
+
+
             if self.preferred_exposure_time:
                 target = self.preferred_exposure_time.calculate_based_on_frame(frame)
                 if target is not None:
@@ -291,8 +344,12 @@ class UVC_Source(Base_Source):
             if self.ts_offset:  # c930 timestamps need to be set here. The camera does not provide valid pts from device
                 frame.timestamp = uvc.get_time_monotonic() + self.ts_offset
             frame.timestamp -= self.g_pool.timebase.value
-            self._recent_frame = frame
-            events['frame'] = frame
+
+            out_frame = UVC_Frame(frame)
+
+            self._recent_frame = out_frame
+            events['frame'] = out_frame
+
             self._restart_in = 3
 
     def _get_uvc_controls(self):
@@ -308,6 +365,7 @@ class UVC_Source(Base_Source):
         d['frame_rate'] = self.frame_rate
         d['check_stripes'] = self.check_stripes
         d['exposure_mode'] = self.exposure_mode
+        d['frame_format'] = self.frame_format
         if self.uvc_capture:
             d['name'] = self.name
             d['uvc_controls'] = self._get_uvc_controls()
@@ -344,6 +402,19 @@ class UVC_Source(Base_Source):
 
         if self.check_stripes and ("Pupil Cam2" in self.uvc_capture.name):
             self.checkframestripes = Check_Frame_Stripes()
+
+
+    @property
+    def frame_format(self):
+        if self.uvc_capture:
+            return self.uvc_capture.frame_format
+        else:
+            return self.frame_format_backup
+    @frame_format.setter
+    def frame_format(self, new_format):
+        self.uvc_capture.frame_format = new_format
+        self.frame_format_backup = new_format
+
 
     @property
     def frame_rate(self):
@@ -433,6 +504,9 @@ class UVC_Source(Base_Source):
         def set_frame_rate(new_rate):
             self.frame_rate = new_rate
             self.update_menu()
+        def set_frame_format(new_format):
+            self.frame_format = new_format
+            self.update_menu()
 
         if self.uvc_capture is None:
             ui_elements.append(ui.Info_Text('Capture initialization failed.'))
@@ -447,6 +521,7 @@ class UVC_Source(Base_Source):
         image_processing.collapsed = True
 
         sensor_control.append(ui.Selector('frame_size', self, setter=set_frame_size, selection=self.uvc_capture.frame_sizes, label='Resolution'))
+        sensor_control.append(ui.Selector('frame_format', self, setter=set_frame_format, selection=self.uvc_capture.frame_formats, label='Format'))
 
         def frame_rate_getter():
             return (self.uvc_capture.frame_rates, [str(fr) for fr in self.uvc_capture.frame_rates])
@@ -579,6 +654,7 @@ class UVC_Manager(Base_Manager):
             settings = {
                 'frame_size': self.g_pool.capture.frame_size,
                 'frame_rate': self.g_pool.capture.frame_rate,
+                'frame_format': self.g_pool.capture.frame_format,
                 'uid': source_uid
             }
             if self.g_pool.process == 'world':
